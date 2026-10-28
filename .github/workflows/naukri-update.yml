@@ -11,7 +11,8 @@ concurrency: naukri-refresh # never run two at once
 
 jobs:
   refresh:
-    runs-on: ubuntu-latest
+    # Naukri blocks GitHub's cloud IPs ("Access Denied"), so this runs on your own machine.
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          python -m playwright install --with-deps chromium
+          python -m playwright install chromium
 
       - name: Update Naukri profile
         env:
