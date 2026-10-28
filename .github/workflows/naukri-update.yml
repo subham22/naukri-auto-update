@@ -1,0 +1,41 @@
+name: Naukri profile refresh
+
+on:
+  schedule:
+    # Every hour at :17 (UTC). Off the top of the hour because GitHub
+    # delays/drops runs scheduled at :00 when its queue is busy.
+    - cron: "17 * * * *"
+  workflow_dispatch: # run it manually from the Actions tab
+
+concurrency: naukri-refresh # never run two at once
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Update Naukri profile
+        env:
+          NAUKRI_EMAIL: ${{ secrets.NAUKRI_EMAIL }}
+          NAUKRI_PASSWORD: ${{ secrets.NAUKRI_PASSWORD }}
+        run: python naukri_update.py
+
+      - name: Upload screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-screenshot
+          path: failure.png
+          retention-days: 3
