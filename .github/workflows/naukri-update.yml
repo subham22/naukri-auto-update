@@ -37,5 +37,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: failure-screenshot
-          path: failure.png
+          path: |
+            failure.png
+            failure.html
           retention-days: 3

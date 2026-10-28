@@ -27,10 +27,11 @@ UA = (
 
 
 def login(page):
-    page.goto(LOGIN_URL, wait_until="domcontentloaded")
-    page.fill("#usernameField", EMAIL)
-    page.fill("#passwordField", PASSWORD)
-    page.click("button[type=submit]")
+    page.goto(LOGIN_URL, wait_until="networkidle")
+    # Fallbacks in case Naukri renamed the ids.
+    page.locator("#usernameField, input[placeholder*='Email' i], input[type=email]").first.fill(EMAIL)
+    page.locator("#passwordField, input[type=password]").first.fill(PASSWORD)
+    page.locator("button[type=submit]").first.click()
     try:
         page.wait_for_url("**/mnjuser/**", timeout=30_000)
     except PWTimeout:
@@ -68,15 +69,18 @@ def upload_resume(page):
 
 def main():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(user_agent=UA, viewport={"width": 1366, "height": 900})
+        # Hides the "controlled by automation" flag that bot-checks look for.
+        browser = p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled"])
+        page = browser.new_page(user_agent=UA, viewport={"width": 1366, "height": 900}, locale="en-IN")
+        page.set_default_timeout(20_000)
         try:
             login(page)
             toggle_headline(page)
             upload_resume(page)
         except Exception as e:
             page.screenshot(path="failure.png", full_page=True)
-            print(f"FAILED: {e}", file=sys.stderr)
+            Path("failure.html").write_text(page.content(), encoding="utf-8")
+            print(f"FAILED at {page.url} (title: {page.title()!r}): {e}", file=sys.stderr)
             sys.exit(1)
         finally:
             browser.close()
